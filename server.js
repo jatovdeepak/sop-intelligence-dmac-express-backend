@@ -8,6 +8,7 @@ const cors = require('cors'); // 1. IMPORT CORS
 const authRoutes = require('./routes/authRoutes');
 const sopRoutes = require('./routes/sopRoutes');
 const userRoutes = require('./routes/userRoutes');
+const auditRoutes = require('./routes/auditRoutes');
 
 
 const app = express();
@@ -144,6 +145,13 @@ const swaggerDocument = {
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
                 responses: { '200': { description: 'User deleted' } }
             }
+        },
+        '/api/audit': {
+            get: {
+                summary: 'Retrieve all system audit logs (Admin only)',
+                tags: ['Audit'],
+                responses: { '200': { description: 'A list of all actions logged by the system' } }
+            }
         }
 
     }
@@ -156,6 +164,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/auth', authRoutes);
 app.use('/api/sops', sopRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/audit', auditRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`DMAC Layer running on port ${PORT}`));
