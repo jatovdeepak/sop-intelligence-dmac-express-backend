@@ -1,21 +1,42 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Note: In production, hash passwords using bcrypt. Kept simple for DMAC scope.
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username, password });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
+  try {
+    // 1. Find user by username
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // 2. Compare hashed password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // 3. Create JWT with role + system
     const token = jwt.sign(
-      { id: user._id, role: user.role, system: user.system },
+      {
+        id: user._id,
+        role: user.role,
+        system: user.system,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' },
+      { expiresIn: '1h' }
     );
 
-    res.json({ token, system: user.system, role: user.role });
+    // 4. Send response
+    res.json({
+      token,
+      system: user.system,
+      role: user.role,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
 };

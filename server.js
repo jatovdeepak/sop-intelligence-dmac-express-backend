@@ -2,12 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const connectDB = require('./config/db');
 const swaggerUi = require('swagger-ui-express'); // Notice we removed swagger-jsdoc
+const cors = require('cors'); // 1. IMPORT CORS
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
 const sopRoutes = require('./routes/sopRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Connect Database
@@ -80,7 +84,68 @@ const swaggerDocument = {
                     '404': { description: 'No PDF found' }
                 }
             }
+        },
+        '/api/users': {
+            get: {
+                summary: 'Get all users (Admin only)',
+                tags: ['Users'],
+                responses: { '200': { description: 'List of users' } }
+            },
+            post: {
+                summary: 'Create a new user (Admin only)',
+                tags: ['Users'],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    username: { type: 'string' },
+                                    password: { type: 'string' },
+                                    system: { type: 'string', enum: ['STEM', 'SOP_Intelligence', 'Admin'] },
+                                    role: { type: 'string', enum: ['Supervisor', 'Operator', 'Admin', 'QA'] }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: { '201': { description: 'User created successfully' } }
+            }
+        },
+        '/api/users/{id}': {
+            get: {
+                summary: 'Get a single user by ID (Admin only)',
+                tags: ['Users'],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+                responses: { '200': { description: 'User data' } }
+            },
+            put: {
+                summary: 'Update a user (Admin only)',
+                tags: ['Users'],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    role: { type: 'string' },
+                                    system: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: { '200': { description: 'User updated' } }
+            },
+            delete: {
+                summary: 'Delete a user (Admin only)',
+                tags: ['Users'],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+                responses: { '200': { description: 'User deleted' } }
+            }
         }
+
     }
 };
 
@@ -89,7 +154,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/sops', sopRoutes); // STEM requests hit this layer
+app.use('/api/sops', sopRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`DMAC Layer running on port ${PORT}`));
