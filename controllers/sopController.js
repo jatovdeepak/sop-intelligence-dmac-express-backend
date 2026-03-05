@@ -1,3 +1,4 @@
+const fs = require('fs');
 const SOP = require('../models/SOP');
 const path = require('path');
 
@@ -91,4 +92,84 @@ exports.downloadSOPPdf = async (req, res) => {
   } catch (err) {
       res.status(500).json({ error: err.message });
   }
+};
+
+// Delete a specific SOP
+exports.deleteSOP = async (req, res) => {
+    try {
+        const sop = await SOP.findById(req.params.id);
+        
+        if (!sop) {
+            return res.status(404).json({ message: 'SOP not found.' });
+        }
+  
+        // If there is an associated PDF file, delete it from the uploads folder
+        if (sop.pdfPath) {
+            const absolutePath = path.resolve(sop.pdfPath);
+            fs.unlink(absolutePath, (err) => {
+                if (err) console.error(`Failed to delete PDF file at ${absolutePath}:`, err);
+            });
+        }
+  
+        // Delete the SOP document from the database
+        await SOP.findByIdAndDelete(req.params.id);
+        
+        res.json({ message: 'SOP deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+  };
+
+
+  // Update a specific SOP
+exports.updateSOP = async (req, res) => {
+    try {
+        const sop = await SOP.findById(req.params.id);
+        
+        if (!sop) {
+            return res.status(404).json({ message: 'SOP not found.' });
+        }
+
+        const updateData = { ...req.body };
+
+        // Parse stringified JSON content (if any)
+        if (req.body.content && typeof req.body.content === 'string') {
+            updateData.content = JSON.parse(req.body.content);
+        }
+
+        // Parse the stringified references array
+        if (req.body.references && typeof req.body.references === 'string') {
+            try {
+                updateData.references = JSON.parse(req.body.references);
+            } catch (e) {
+                return res.status(400).json({ error: 'Invalid references format. Must be a JSON array.' });
+            }
+        }
+
+        // Handle new PDF upload
+        if (req.file) {
+            // Delete the old PDF file if it exists
+            if (sop.pdfPath) {
+                const absolutePath = path.resolve(sop.pdfPath);
+                fs.unlink(absolutePath, (err) => {
+                    if (err) console.error(`Failed to delete old PDF file at ${absolutePath}:`, err);
+                });
+            }
+            updateData.pdfPath = req.file.path; // Set the new file path
+        }
+
+        const updatedSOP = await SOP.findByIdAndUpdate(
+            req.params.id, 
+            updateData, 
+            { new: true, runValidators: true }
+        );
+        
+        res.json({ message: 'SOP updated successfully.', sop: updatedSOP });
+    } catch (err) {
+        // Handle duplicate key error if they try to change sopId to an existing one
+        if (err.code === 11000) {
+            return res.status(400).json({ error: 'SOP ID already exists.' });
+        }
+        res.status(400).json({ error: err.message });
+    }
 };

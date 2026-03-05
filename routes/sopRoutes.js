@@ -25,4 +25,17 @@ router.post('/',
     sopController.createSOP
 );
 
+router.delete('/:id', 
+    authorizeRoles('Creator', 'Admin'), 
+    logAction('DELETE_SOP'), 
+    sopController.deleteSOP
+);
+
+router.put('/:id', 
+    authorizeRoles('Creator', 'Admin'), 
+    uploadSOPFile.single('pdf'), 
+    logAction('UPDATE_SOP'), 
+    sopController.updateSOP
+);
+
 module.exports = router;

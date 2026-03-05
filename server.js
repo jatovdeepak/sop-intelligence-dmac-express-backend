@@ -77,6 +77,46 @@ const swaggerDocument = {
                 tags: ['SOPs'],
                 parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
                 responses: { '200': { description: 'SOP data' } }
+            },
+            put: {
+                summary: 'Update a specific SOP by ID',
+                tags: ['SOPs'],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    content: {
+                        'multipart/form-data': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    title: { type: 'string', description: 'SOP Name' },
+                                    type: { type: 'string', enum: ['Quality', 'Production', 'Safety'] },
+                                    version: { type: 'string', description: 'e.g., v1.1' },
+                                    description: { type: 'string' },
+                                    references: { type: 'string', description: 'Stringified array of SOP IDs' },
+                                    status: { type: 'string', enum: ['Active', 'Draft', 'Archived'] },
+                                    requiredRoles: { type: 'string', description: 'Enter a role (e.g., Manager)' },
+                                    pdf: { type: 'string', format: 'binary', description: 'Optional new PDF file to replace the old one' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: { 
+                    '200': { description: 'SOP updated successfully' },
+                    '400': { description: 'Validation error or duplicate ID' },
+                    '403': { description: 'Access Denied: Role lacks permissions' },
+                    '404': { description: 'SOP not found' }
+                }
+            },
+            delete: {
+                summary: 'Delete a specific SOP by ID',
+                tags: ['SOPs'],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+                responses: { 
+                    '200': { description: 'SOP deleted successfully' },
+                    '404': { description: 'SOP not found' },
+                    '403': { description: 'Access Denied: Role lacks permissions' }
+                }
             }
         },
         '/api/sops/{id}/pdf': {
