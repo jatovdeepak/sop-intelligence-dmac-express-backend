@@ -1,6 +1,4 @@
-const fs = require('fs');
 const SOP = require('../models/SOP');
-const path = require('path');
 
 // Get all accessible SOPs based on System and Role
 exports.getSOPs = async (req, res) => {
@@ -25,7 +23,7 @@ exports.getSOPById = async (req, res) => {
   try {
       const sop = req.requestedSOP;
 
-      // NEW LOGIC: Allow if role is in the array, OR if the user is an Admin/Operator
+      // Allow if role is in the array, OR if the user is an Admin/Operator
       if (!sop.requiredRoles.includes(req.user.role) && req.user.role !== 'Admin' && req.user.role !== 'Operator') {
           return res.status(403).json({ message: 'You do not have the required role to view this specific SOP.' });
       }
@@ -36,11 +34,10 @@ exports.getSOPById = async (req, res) => {
   }
 };
 
-// Created by SOP Intelligence
-
+// Create SOP
 exports.createSOP = async (req, res) => {
   try {
-      // Safely handle form-data payload
+      // The frontend now sends the external PDF link in the body (e.g., req.body.pdfPath)
       const sopData = { ...req.body };
 
       // Parse stringified JSON content (if any)
@@ -48,17 +45,13 @@ exports.createSOP = async (req, res) => {
           sopData.content = JSON.parse(req.body.content);
       }
 
-      // NEW: Parse the stringified references array sent from FormData
+      // Parse the stringified references array
       if (req.body.references && typeof req.body.references === 'string') {
           try {
               sopData.references = JSON.parse(req.body.references);
           } catch (e) {
               return res.status(400).json({ error: 'Invalid references format. Must be a JSON array.' });
           }
-      }
-
-      if (req.file) {
-          sopData.pdfPath = req.file.path; // Save the Multer file path
       }
 
       const newSOP = new SOP(sopData);
@@ -73,7 +66,7 @@ exports.createSOP = async (req, res) => {
   }
 };
 
-
+// Download/View SOP PDF
 exports.downloadSOPPdf = async (req, res) => {
     try {
         const sop = req.requestedSOP; 
@@ -87,13 +80,8 @@ exports.downloadSOPPdf = async (req, res) => {
             return res.status(404).json({ message: 'No PDF associated with this SOP.' });
         }
   
-        const absolutePath = path.resolve(sop.pdfPath);
-        
-        // FIX: Explicitly set headers to force inline viewing before sending the file
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
-        
-        res.sendFile(absolutePath);
+        // Redirect the user directly to the external storage URL
+        res.redirect(sop.pdfPath);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -108,14 +96,6 @@ exports.deleteSOP = async (req, res) => {
             return res.status(404).json({ message: 'SOP not found.' });
         }
   
-        // If there is an associated PDF file, delete it from the uploads folder
-        if (sop.pdfPath) {
-            const absolutePath = path.resolve(sop.pdfPath);
-            fs.unlink(absolutePath, (err) => {
-                if (err) console.error(`Failed to delete PDF file at ${absolutePath}:`, err);
-            });
-        }
-  
         // Delete the SOP document from the database
         await SOP.findByIdAndDelete(req.params.id);
         
@@ -125,8 +105,7 @@ exports.deleteSOP = async (req, res) => {
     }
   };
 
-
-  // Update a specific SOP
+// Update a specific SOP
 exports.updateSOP = async (req, res) => {
     try {
         const sop = await SOP.findById(req.params.id);
@@ -149,18 +128,6 @@ exports.updateSOP = async (req, res) => {
             } catch (e) {
                 return res.status(400).json({ error: 'Invalid references format. Must be a JSON array.' });
             }
-        }
-
-        // Handle new PDF upload
-        if (req.file) {
-            // Delete the old PDF file if it exists
-            if (sop.pdfPath) {
-                const absolutePath = path.resolve(sop.pdfPath);
-                fs.unlink(absolutePath, (err) => {
-                    if (err) console.error(`Failed to delete old PDF file at ${absolutePath}:`, err);
-                });
-            }
-            updateData.pdfPath = req.file.path; // Set the new file path
         }
 
         const updatedSOP = await SOP.findByIdAndUpdate(
