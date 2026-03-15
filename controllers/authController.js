@@ -40,3 +40,29 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+// Add this new function
+exports.extendSession = async (req, res) => {
+  try {
+    // Because this route will use your `authenticate` middleware, 
+    // req.user is already decoded and verified!
+    const user = req.user; 
+
+    // Generate a fresh token with a reset timer (e.g., another 1 hour)
+    const newToken = jwt.sign(
+      {
+        id: user.id,
+        role: user.role,
+        system: user.system,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' } // Reset the clock to 1 hour
+    );
+
+    res.json({ token: newToken });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to extend session' });
+  }
+};
