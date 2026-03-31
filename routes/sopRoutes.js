@@ -14,7 +14,7 @@ router.use(authenticate);
 // --- NEW OPTIMIZED ROUTES ---
 // Must go BEFORE /:id to prevent Express from treating "metadata" as an ID param
 router.get('/metadata', logAction('LIST_SOP_METADATA'), sopController.getAllSOPMetadata);
-
+router.get('/:id/metadata', logAction('FETCH_SOP_METADATA'), sopController.getSOPMetaDataById);
 router.get('/:id/data', logAction('FETCH_SOP_DATA'), sopController.getSOPDataById);
 router.get('/:id/pdf-base64', logAction('FETCH_SOP_BASE64'), sopController.getSOPPdfBase64ById);
 
